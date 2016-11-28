@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 __author__ = 'xtwxfxk'
 
-import logging, traceback, time, threading, weakref
+import logging
+import traceback
+import time
+import threading
+import weakref
 try:
     import queue
 except ImportError:

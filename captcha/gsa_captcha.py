@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 __author__ = 'xtwxfxk'
 
-import StringIO, urllib2, time
+import StringIO
+import urllib2
+import time
 from ClientForm import ParseFile
 from lutils.lrequest import LRequest
 
