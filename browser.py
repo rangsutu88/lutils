@@ -126,6 +126,14 @@ class BrowserMixin():
                 time.sleep(0.1)
             time.sleep(1)
 
+    def scroll_up(self, click_num=5):
+        body = self.xpath('//body')
+        if body:
+            for _ in range(click_num):
+                body.send_keys(Keys.PAGE_UP)
+                time.sleep(0.1)
+            time.sleep(1)
+
     def fill(self, name_a, value):
         ele = self.find_name(name_a)
         if ele:
