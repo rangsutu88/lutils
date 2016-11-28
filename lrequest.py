@@ -1,7 +1,19 @@
 # -*- coding: utf-8 -*-
 __author__ = 'xtwxfxk'
 
-import os, sys, time, re, socket, socks, threading, random, gzip, datetime, httplib, logging, traceback
+import os
+import sys
+import time
+import re
+import socket
+import socks
+import threading
+import random
+import gzip
+import datetime
+import httplib
+import logging
+import traceback
 if sys.version_info[0] >= 3:
     from http import cookiejar
     from urllib.parse import urlparse
