@@ -3,6 +3,7 @@ __author__ = 'xtwxfxk'
 
 import os
 import sys
+import re
 import time
 import json
 import copy
@@ -16,6 +17,8 @@ import random
 import traceback
 import cPickle
 import urllib2
+import lxml
+from lxml import html
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
@@ -115,8 +118,30 @@ class LFirefoxProfile(firefox_profile.FirefoxProfile):
 
 class BrowserMixin():
 
+    def _clean(self, html, remove=['br', 'hr']):
+        self.remove = remove
+        html = re.compile('<!--.*?-->', re.DOTALL).sub('', html) # remove comments
+        if remove:
+            # XXX combine tag list into single regex, if can match same at start and end
+            for tag in remove:
+                html = re.compile('<' + tag + '[^>]*?/>', re.DOTALL | re.IGNORECASE).sub('', html)
+                html = re.compile('<' + tag + '[^>]*?>.*?</' + tag + '>', re.DOTALL | re.IGNORECASE).sub('', html)
+                html = re.compile('<' + tag + '[^>]*?>', re.DOTALL | re.IGNORECASE).sub('', html)
+        return html
+
+    @property
+    def html(self):
+        return self._html
+
+    @html.setter
+    def html(self, source):
+        self._html = self._clean(source)
+        self.tree = html.fromstring(self._clean(self.html))
+
     def load(self, url):
         self.get(url)
+
+        self.html = self.page_source
 
     def scroll_down(self, click_num=5):
         body = self.xpath('//body')
@@ -134,11 +159,11 @@ class BrowserMixin():
                 time.sleep(0.1)
             time.sleep(1)
 
-    def fill(self, name_a, value):
+    def fill(self, name_a, *value):
         ele = self.find_name(name_a)
         if ele:
             ele.clear()
-            ele.send_keys(value)
+            ele.send_keys(*value)
             time.sleep(0.5)
         else: raise NoSuchElementException('%s Element Not Found' % name_a)
 
@@ -198,11 +223,20 @@ class BrowserMixin():
             if ignore: return None
             else: raise NoSuchElementException(xpath)
 
-    def fill_id(self, id, value):
+    def xpath_local(self, xpath):
+        eles = self.tree.xpath(xpath)
+        if eles and len(eles) > 0:
+            return eles[0]
+        return None
+
+    def xpaths_local(self, xpath):
+        return self.tree.xpath(xpath)
+
+    def fill_id(self, id, *value):
         ele = self.find_id(id)
         if ele:
             ele.clear()
-            ele.send_keys(value)
+            ele.send_keys(*value)
             time.sleep(0.5)
         else: raise NoSuchElementException('%s Element Not Found' % id)
 
@@ -309,6 +343,8 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
         if exe_path is not None:
             self.save_exe(exe_path)
 
+        self._html = ''
+
     def _init_new(self, firefox_profile=None, firefox_binary=None, string_proxy=None, timeout=180, capabilities=None, proxy=None, profile_preferences={}, **kwargs):
         if firefox_profile is None:
             firefox_profile = LFirefoxProfile(profile_directory=kwargs.get('profile_directory', None), is_temp=kwargs.get('is_temp', False))
@@ -398,11 +434,11 @@ class BrowserPhantomJS(webdriver.PhantomJS):
 
 
 
-    def fill(self, name, value):
+    def fill(self, name, *value):
         ele = self.find_name(name)
         if ele:
             ele.clear()
-            ele.send_keys(value)
+            ele.send_keys(*value)
             time.sleep(0.5)
         else: raise NoSuchElementException('%s Element Not Found' % name)
 
@@ -462,11 +498,11 @@ class BrowserPhantomJS(webdriver.PhantomJS):
             if ignore: return None
             else: raise NoSuchElementException(xpath)
 
-    def fill_id(self, id, value):
+    def fill_id(self, id, *value):
         ele = self.find_id(id)
         if ele:
             ele.clear()
-            ele.send_keys(value)
+            ele.send_keys(*value)
             time.sleep(0.5)
         else: raise NoSuchElementException('%s Element Not Found' % id)
 

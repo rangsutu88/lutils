@@ -375,7 +375,7 @@ class LRequest(object):
             if is_xpath:
                 # self.tree = Selector(text=str(BeautifulSoup(self.body, 'lxml')))
                 # self.tree = html.fromstring(str(BeautifulSoup(self.body, 'lxml')))
-                self.tree = html.fromstring(self.body)
+                self.tree = html.fromstring(self._clean(self.body))
         except :
             raise
         finally:
@@ -403,6 +403,17 @@ class LRequest(object):
 
     def get_ele_text(self, ele):
         return "".join([x for x in ele.itertext()]).strip()
+
+    def _clean(self, html, remove=['br', 'hr']):
+        self.remove = remove
+        html = re.compile('<!--.*?-->', re.DOTALL).sub('', html) # remove comments
+        if remove:
+            # XXX combine tag list into single regex, if can match same at start and end
+            for tag in remove:
+                html = re.compile('<' + tag + '[^>]*?/>', re.DOTALL | re.IGNORECASE).sub('', html)
+                html = re.compile('<' + tag + '[^>]*?>.*?</' + tag + '>', re.DOTALL | re.IGNORECASE).sub('', html)
+                html = re.compile('<' + tag + '[^>]*?>', re.DOTALL | re.IGNORECASE).sub('', html)
+        return html
 
     def __del__(self):
         if self._opener:
@@ -454,6 +465,8 @@ class LRequestMozillaCookie(LRequest):
     def load_cookies(self):
         if self.cookie_path and os.path.exists(self.cookie_path):
             self.cookie.load()
+
+
 
 LRequestCookie = LRequestMozillaCookie
 
