@@ -118,6 +118,9 @@ class LFirefoxProfile(firefox_profile.FirefoxProfile):
 
 class BrowserMixin():
 
+    def sync_local(self):
+        self.html = self.page_source
+
     def _clean(self, html, remove=['br', 'hr']):
         self.remove = remove
         html = re.compile('<!--.*?-->', re.DOTALL).sub('', html) # remove comments
@@ -136,12 +139,10 @@ class BrowserMixin():
     @html.setter
     def html(self, source):
         self._html = self._clean(source)
-        self.tree = html.fromstring(self._clean(self.html))
+        self.tree = html.fromstring(self._html)
 
     def load(self, url):
         self.get(url)
-
-        self.html = self.page_source
 
     def scroll_down(self, click_num=5):
         body = self.xpath('//body')
@@ -261,6 +262,9 @@ class BrowserMixin():
             if _same_count > jump:
                 break
             time.sleep(1.5)
+
+    def down_bottom(self):
+        self.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     def click_xpaths(self, xpath, num=-1):
         _eles = []
