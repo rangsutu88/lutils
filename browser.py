@@ -370,6 +370,11 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
                 firefox_profile.set_preference('network.proxy.socks_port', proxyinfo.port)
                 firefox_profile.set_preference('network.proxy.socks_remote_dns', True)
 
+        if kwargs.get('random_ua', False):
+            user_agent = read_random_lines(USER_AGENT_DIR, 5)[0]
+            firefox_profile.set_preference('general.useragent.override', user_agent)
+
+
         for k, v in profile_preferences.items():
             firefox_profile.set_preference(k, v)
 
