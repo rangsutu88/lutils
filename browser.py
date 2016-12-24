@@ -337,10 +337,10 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
                 webdriver.Remote.__init__(self, command_executor=e['command_executor'], desired_capabilities={})
                 self.session_id = e['session_id']
             except urllib2.URLError:
-                self._init_new(firefox_profile=firefox_profile, firefox_binary=firefox_binary, string_proxy=string_proxy, timeout=timeout, capabilities=capabilities, proxy=proxy, profile_preferences=profile_preferences, **kwargs)
+                self._init_instance(firefox_profile=firefox_profile, firefox_binary=firefox_binary, string_proxy=string_proxy, timeout=timeout, capabilities=capabilities, proxy=proxy, profile_preferences=profile_preferences, **kwargs)
         else:
 
-            self._init_new(firefox_profile=firefox_profile, firefox_binary=firefox_binary, string_proxy=string_proxy, timeout=timeout, capabilities=capabilities, proxy=proxy, profile_preferences=profile_preferences, **kwargs)
+            self._init_instance(firefox_profile=firefox_profile, firefox_binary=firefox_binary, string_proxy=string_proxy, timeout=timeout, capabilities=capabilities, proxy=proxy, profile_preferences=profile_preferences, **kwargs)
 
         self.wait = WebDriverWait(self, self.timeout)
 
@@ -349,7 +349,7 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
 
         self._html = ''
 
-    def _init_new(self, firefox_profile=None, firefox_binary=None, string_proxy=None, timeout=180, capabilities=None, proxy=None, profile_preferences={}, **kwargs):
+    def _init_instance(self, firefox_profile=None, firefox_binary=None, string_proxy=None, timeout=180, capabilities=None, proxy=None, profile_preferences={}, **kwargs):
         if firefox_profile is None:
             firefox_profile = LFirefoxProfile(profile_directory=kwargs.get('profile_directory', None), is_temp=kwargs.get('is_temp', False))
 
