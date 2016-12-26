@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 from ClientForm import ParseFile
 from lutils.socksipyhandler import SocksiPyHandler, SocksiPysHandler
 
-from lutils import read_random_lines, LUTILS_ROOT
+from lutils import read_random_lines, LUTILS_ROOT, _clean
 
 
 __all__ = ['LRequest', 'LRequestCookie']
@@ -375,7 +375,7 @@ class LRequest(object):
             if is_xpath:
                 # self.tree = Selector(text=str(BeautifulSoup(self.body, 'lxml')))
                 # self.tree = html.fromstring(str(BeautifulSoup(self.body, 'lxml')))
-                self.tree = html.fromstring(self._clean(self.body))
+                self.tree = html.fromstring(_clean(self.body))
         except :
             raise
         finally:
@@ -404,16 +404,16 @@ class LRequest(object):
     def get_ele_text(self, ele):
         return "".join([x for x in ele.itertext()]).strip()
 
-    def _clean(self, html, remove=['br', 'hr']):
-        self.remove = remove
-        html = re.compile('<!--.*?-->', re.DOTALL).sub('', html) # remove comments
-        if remove:
-            # XXX combine tag list into single regex, if can match same at start and end
-            for tag in remove:
-                html = re.compile('<' + tag + '[^>]*?/>', re.DOTALL | re.IGNORECASE).sub('', html)
-                html = re.compile('<' + tag + '[^>]*?>.*?</' + tag + '>', re.DOTALL | re.IGNORECASE).sub('', html)
-                html = re.compile('<' + tag + '[^>]*?>', re.DOTALL | re.IGNORECASE).sub('', html)
-        return html
+    # def _clean(self, html, remove=['br', 'hr']):
+    #     self.remove = remove
+    #     html = re.compile('<!--.*?-->', re.DOTALL).sub('', html) # remove comments
+    #     if remove:
+    #         # XXX combine tag list into single regex, if can match same at start and end
+    #         for tag in remove:
+    #             html = re.compile('<' + tag + '[^>]*?/>', re.DOTALL | re.IGNORECASE).sub('', html)
+    #             html = re.compile('<' + tag + '[^>]*?>.*?</' + tag + '>', re.DOTALL | re.IGNORECASE).sub('', html)
+    #             html = re.compile('<' + tag + '[^>]*?>', re.DOTALL | re.IGNORECASE).sub('', html)
+    #     return html
 
     def __del__(self):
         if self._opener:

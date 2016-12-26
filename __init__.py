@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 __author__ = 'xtwxfxk'
 
-import os, random, bisect, codecs, urlparse
+import os
+import re
+import random
+import bisect
+import codecs
+import urlparse
 from bs4 import BeautifulSoup
 
 LUTILS_ROOT = os.path.dirname(__file__)
@@ -97,3 +102,14 @@ def get_tld(url):
     url = "http://www.python.org"
     domain = urlparse.urlsplit(url)[1].split(':')[0]
     print "The domain name of the url is: ", domain
+
+
+def _clean(html, remove=['br', 'hr']):
+    html = re.compile('<!--.*?-->', re.DOTALL).sub('', html)  # remove comments
+    if remove:
+        # XXX combine tag list into single regex, if can match same at start and end
+        for tag in remove:
+            html = re.compile('<' + tag + '[^>]*?/>', re.DOTALL | re.IGNORECASE).sub('', html)
+            html = re.compile('<' + tag + '[^>]*?>.*?</' + tag + '>', re.DOTALL | re.IGNORECASE).sub('', html)
+            html = re.compile('<' + tag + '[^>]*?>', re.DOTALL | re.IGNORECASE).sub('', html)
+    return html

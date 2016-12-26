@@ -32,7 +32,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.common.exceptions import NoSuchElementException
 
-from lutils import read_random_lines, LUTILS_ROOT
+from lutils import read_random_lines, LUTILS_ROOT, _clean
 
 
 USER_AGENT_DIR = os.path.join(LUTILS_ROOT, 'user_agent')
@@ -121,16 +121,6 @@ class BrowserMixin():
     def sync_local(self):
         self.html = self.page_source
 
-    def _clean(self, html, remove=['br', 'hr']):
-        self.remove = remove
-        html = re.compile('<!--.*?-->', re.DOTALL).sub('', html) # remove comments
-        if remove:
-            # XXX combine tag list into single regex, if can match same at start and end
-            for tag in remove:
-                html = re.compile('<' + tag + '[^>]*?/>', re.DOTALL | re.IGNORECASE).sub('', html)
-                html = re.compile('<' + tag + '[^>]*?>.*?</' + tag + '>', re.DOTALL | re.IGNORECASE).sub('', html)
-                html = re.compile('<' + tag + '[^>]*?>', re.DOTALL | re.IGNORECASE).sub('', html)
-        return html
 
     @property
     def html(self):
@@ -138,7 +128,7 @@ class BrowserMixin():
 
     @html.setter
     def html(self, source):
-        self._html = self._clean(source)
+        self._html = _clean(source)
         self.tree = html.fromstring(self._html)
 
     def load(self, url):
