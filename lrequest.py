@@ -170,6 +170,16 @@ def find_open_port(min_port=5000, max_port=10000):
             port = port + random.randint(1, 300)
 
 class LRequest(object):
+    '''
+    form = lr.get_forms()[0]
+    form.find_control('name').get(label='option label').selected = True
+    form.find_control(id='id').get(label='option label').selected = True
+
+    a = form.find_control('url')
+    for item in form.find_control("url").items:
+        print '%s' % (item.name)
+
+    '''
 
     current_url = ''
 
@@ -342,12 +352,15 @@ class LRequest(object):
                 del response
 
     def get_forms(self):
-        return ParseFile(io.StringIO(str(BeautifulSoup(self.body, 'lxml')).replace('<br/>', '').replace('<hr/>', '')), self.current_url, backwards_compat=False)
+        return ParseFile(io.StringIO(str(BeautifulSoup(self.body, 'lxml'))), self.current_url, backwards_compat=False) # .replace('<br/>', '').replace('<hr/>', '')
 
-    def getBody(self):
+
+    @property
+    def body(self):
         return self._body
 
-    def setBody(self, params):
+    @body.setter
+    def body(self, params):
         try:
             response, isdecode, is_xpath = params
             body = ''
@@ -372,20 +385,21 @@ class LRequest(object):
             else:
                 self._body = response
 
+            self._body = _clean(self._body)
             if is_xpath:
                 # self.tree = Selector(text=str(BeautifulSoup(self.body, 'lxml')))
                 # self.tree = html.fromstring(str(BeautifulSoup(self.body, 'lxml')))
-                self.tree = html.fromstring(_clean(self.body))
+                self.tree = html.fromstring(self._body)
         except :
             raise
         finally:
             del response
             del body
 
-    def delBody(self):
-        del self._body
+    # def delBody(self):
+    #     del self._body
 
-    body = property(getBody, setBody, delBody, "http response text property.")
+    # body = property(getBody, setBody, delBody, "http response text property.")
 
     def xpath(self, xpath):
         eles = self.tree.xpath(xpath)

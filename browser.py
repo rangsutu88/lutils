@@ -18,6 +18,7 @@ import traceback
 import cPickle
 import urllib2
 import lxml
+import functools
 from lxml import html
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
@@ -35,6 +36,7 @@ from selenium.common.exceptions import NoSuchElementException
 from lutils import read_random_lines, LUTILS_ROOT, _clean
 
 
+PHANTOMJS_PATH = os.path.join(LUTILS_ROOT, 'phantomjs/phantomjs.exe')
 USER_AGENT_DIR = os.path.join(LUTILS_ROOT, 'user_agent')
 GECKODRIVER = os.path.join(LUTILS_ROOT, 'geckodriver')
 
@@ -116,7 +118,16 @@ class LFirefoxProfile(firefox_profile.FirefoxProfile):
                 except :
                     pass
 
-class BrowserMixin():
+def deco_sync_local(func):
+    @functools.wraps(func)
+    def wrapper(self, url, *args, **kwargs):
+        func(self, url)
+        self.sync_local()
+
+    return wrapper
+
+class BrowserMixin(object):
+
 
     def sync_local(self):
         self.html = self.page_source
@@ -131,6 +142,7 @@ class BrowserMixin():
         self._html = _clean(source)
         self.tree = html.fromstring(self._html)
 
+    @deco_sync_local
     def load(self, url):
         self.get(url)
 
@@ -139,23 +151,23 @@ class BrowserMixin():
         if body:
             for _ in range(click_num):
                 body.send_keys(Keys.PAGE_DOWN)
-                time.sleep(0.1)
-            time.sleep(1)
+                time.sleep(self.wait_time)
+            time.sleep(self.wait_time)
 
     def scroll_up(self, click_num=5):
         body = self.xpath('//body')
         if body:
             for _ in range(click_num):
                 body.send_keys(Keys.PAGE_UP)
-                time.sleep(0.1)
-            time.sleep(1)
+                time.sleep(self.wait_time)
+            time.sleep(self.wait_time)
 
     def fill(self, name_a, *value):
         ele = self.find_name(name_a)
         if ele:
             ele.clear()
             ele.send_keys(*value)
-            time.sleep(0.5)
+            time.sleep(self.wait_time)
         else: raise NoSuchElementException('%s Element Not Found' % name_a)
 
     def find_ids(self, id, ignore=False):
@@ -228,7 +240,7 @@ class BrowserMixin():
         if ele:
             ele.clear()
             ele.send_keys(*value)
-            time.sleep(0.5)
+            time.sleep(self.wait_time)
         else: raise NoSuchElementException('%s Element Not Found' % id)
 
     def wait_xpath(self, xpath):
@@ -244,14 +256,14 @@ class BrowserMixin():
                 break
             if _count ==_c:
                 _same_count += 1
-                time.sleep(1)
+                time.sleep(self.wait_time)
             else:
                 _count = _c
                 _same_count = 0
 
             if _same_count > jump:
                 break
-            time.sleep(1.5)
+            time.sleep(self.wait_time)
 
     def down_bottom(self):
         self.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -275,7 +287,7 @@ class BrowserMixin():
                 _eles = __eles
             for _e in _eles:
                 _e.click()
-                time.sleep(random.randrange(1000, 5555, 50)/1000.0)
+                time.sleep(self.wait_time) # random.randrange(1000, 5555, 50)/1000.0)
 
     def wait_xpath(self, xpath, timeout=None):
         if time is None: timeout = self.timeout
@@ -302,7 +314,7 @@ class BrowserMixin():
     def hover(self, element):
         hov = ActionChains(self).move_to_element(element)
         hov.perform()
-        time.sleep(1)
+        time.sleep(self.wait_time)
 
     def save_exe(self, exe_path):
         cPickle.dump({'command_executor': self.command_executor._url, 'session_id': self.session_id}, open(exe_path, 'wb'))
@@ -320,6 +332,8 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
         self.timeout = timeout + 2
         self.wait_timeout = kwargs.get('wait_timeout', self.timeout)
         self.script_timeout = kwargs.get('script_timeout', self.timeout)
+
+        self.wait_time = 0.5
 
         if exe_path is not None and os.path.exists(exe_path):
             try:
@@ -368,10 +382,10 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
         for k, v in profile_preferences.items():
             firefox_profile.set_preference(k, v)
 
-        if sys.platform == 'win32':
-            executable_path = os.path.join(GECKODRIVER, 'geckodriver_x64.exe')
-        else:
-            executable_path = os.path.join(GECKODRIVER, 'geckodriver_x64')
+        # if sys.platform == 'win32':
+        #     executable_path = os.path.join(GECKODRIVER, 'geckodriver_x64.exe')
+        # else:
+        #     executable_path = os.path.join(GECKODRIVER, 'geckodriver_x64')
         webdriver.Firefox.__init__(self, firefox_profile=firefox_profile, firefox_binary=firefox_binary, timeout=timeout, capabilities=capabilities, proxy=None) # , executable_path=executable_path
 
         self.set_page_load_timeout(self.timeout)
@@ -380,38 +394,40 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
 
 
 
-class BrowserRemote(webdriver.Remote, BrowserMixin):
-
-    def __init__(self, exe_path=None):
-        e = cPickle.load(open(exe_path, 'rb'))
-        webdriver.Remote.__init__(self, command_executor=e['command_executor'], desired_capabilities={})
-        self.session_id = e['session_id']
-
-
+# class BrowserRemote(webdriver.Remote, BrowserMixin):
+#
+#     def __init__(self, exe_path=None):
+#         e = cPickle.load(open(exe_path, 'rb'))
+#         webdriver.Remote.__init__(self, command_executor=e['command_executor'], desired_capabilities={})
+#         self.session_id = e['session_id']
 
 
-class BrowserPhantomJS(webdriver.PhantomJS):
 
-    def __init__(self, executable_path="phantomjs",
+
+class BrowserPhantomJS(webdriver.PhantomJS, BrowserMixin):
+    ''' "phantomjs"
+
+    '''
+    def __init__(self, executable_path=PHANTOMJS_PATH,
                  port=0, desired_capabilities=DesiredCapabilities.PHANTOMJS,
                  service_args=[], service_log_path=None, string_proxy=None, timeout=180, **kwargs):
 
         self.timeout = timeout
+        self.wait_time = 0.5
 
+        user_agent = read_random_lines(USER_AGENT_DIR, 5)[0]
         _desired_capabilities = {
             'phantomjs.page.settings.loadImages': False,
             'phantomjs.page.settings.resourceTimeout': '%s' % self.timeout * 1000,
-            'phantomjs.page.settings.userAgent': kwargs.get('user_agent', read_random_lines(USER_AGENT_DIR, 5)[0]),
+            'phantomjs.page.settings.userAgent': kwargs.get('user_agent', user_agent),
 
             'page.settings.loadImages': False,
             'page.settings.resourceTimeout': '%s' % self.timeout * 1000,
-            'page.settings.userAgent': kwargs.get('user_agent', read_random_lines(USER_AGENT_DIR, 5)[0])
+            'page.settings.userAgent': kwargs.get('user_agent', user_agent)
 
         }
 
-
         desired_capabilities.update(_desired_capabilities)
-
 
         if string_proxy:
             proxyinfo = urlparse.urlparse(string_proxy)
@@ -429,96 +445,42 @@ class BrowserPhantomJS(webdriver.PhantomJS):
         self.wait_timeout = kwargs.get('wait_timeout', self.timeout)
         self.script_timeout = kwargs.get('script_timeout', self.timeout)
         self.set_page_load_timeout(self.timeout)
-        self.set_window_size(random.randint(800, 1500), random.randint(400, 800))
-
-
+        # self.set_window_size(random.randint(1000, 2200), random.randint(800, 1500))
+        self.set_window_size(1680, 1050)
 
     def fill(self, name, *value):
         ele = self.find_name(name)
         if ele:
-            ele.clear()
+            # ele.clear()
             ele.send_keys(*value)
-            time.sleep(0.5)
-        else: raise NoSuchElementException('%s Element Not Found' % name)
+            time.sleep(self.wait_time)
+        else:
+            raise NoSuchElementException('%s Element Not Found' % name)
 
-    def find_ids(self, id, ignore=False):
-        try:
-            return self.find_elements_by_id(id)
-        except NoSuchElementException as e:
-            if ignore: return []
-            else: raise NoSuchElementException(id)
-
-    def find_id(self, id, ignore=False):
-        try:
-            return self.find_element_by_id(id)
-        except NoSuchElementException as e:
-            if ignore: return None
-            else: raise NoSuchElementException(id)
-
-    def find_names(self, name, ignore=False):
-        try:
-            return self.find_elements_by_name(name)
-        except NoSuchElementException as e:
-            if ignore: return []
-            else: raise NoSuchElementException(name)
-
-    def find_name(self, name, ignore=False):
-        try:
-            return self.find_element_by_name(name)
-        except NoSuchElementException as e:
-            if ignore: return None
-            else: raise NoSuchElementException(name)
-
-    def csss(self, css, ignore=False):
-        try:
-            return self.find_elements_by_css_selector(css)
-        except NoSuchElementException as e:
-            if ignore: return []
-            else: raise NoSuchElementException(css)
-
-    def css(self, css, ignore=False):
-        try:
-            return self.find_element_by_css_selector(css)
-        except NoSuchElementException as e:
-            if ignore: return None
-            else: raise NoSuchElementException(css)
-
-    def xpaths(self, xpath, ignore=False):
-        try:
-            return self.find_elements_by_xpath(xpath)
-        except NoSuchElementException as e:
-            if ignore: return []
-            else: raise NoSuchElementException(xpath)
-
-    def xpath(self, xpath, ignore=False):
-        try:
-            return self.find_element_by_xpath(xpath)
-        except NoSuchElementException as e:
-            if ignore: return None
-            else: raise NoSuchElementException(xpath)
-
-    def fill_id(self, id, *value):
-        ele = self.find_id(id)
-        if ele:
-            ele.clear()
-            ele.send_keys(*value)
-            time.sleep(0.5)
-        else: raise NoSuchElementException('%s Element Not Found' % id)
+    # def __del__(self):
+    #     print 'ddddddddddddddddddddddddddd'
+        # print '####################################sss'
+        # self.quit()
+        # print '####################################ccc'
 
 
 if __name__ == '__main__':
-    import time
-    profile = LFirefoxProfile(profile_directory='K:\\xx\\fff', is_temp=False)
-    browser = Browser(firefox_profile=profile, timeout=30)
-    browser.implicitly_wait(5)
-    browser.set_script_timeout(10)
+    # import time
+    # profile = LFirefoxProfile(profile_directory='K:\\xx\\fff', is_temp=False)
+    # browser = Browser(firefox_profile=profile, timeout=30)
+    # browser.implicitly_wait(5)
+    # browser.set_script_timeout(10)
+    #
+    # browser.get('http://www.baidu.com')
+    #
+    # e = browser.xpath('//div[@class="xxxxx"]')
+    # print e
+    #
+    # print 'ssssssssss'
+    # time.sleep(10)
+    # browser.quit()
 
-    browser.get('http://www.baidu.com')
-
-    e = browser.xpath('//div[@class="xxxxx"]')
-    print e
-
-    print 'ssssssssss'
-    time.sleep(10)
-    browser.quit()
+    b = BrowserPhantomJS()
+    b.load('http://www.baidu.com')
+    print b.page_source
 
