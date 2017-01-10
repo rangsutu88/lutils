@@ -8,6 +8,7 @@ import json
 import traceback
 import datetime
 import tables
+import pandas as pd
 from tables import *
 from ..lrequest import LRequest
 
@@ -56,6 +57,8 @@ class LStockData():
             url = self.start_url % id
             logger.info('Load Url: %s' % url)
             self.lr.load(url)
+
+
 
             _start_year = self.lr.xpaths('//select[@name="year"]/option')[-1].attrib['value'].strip()
             if _start_year < '2004':
@@ -151,36 +154,61 @@ class LStockData():
             raise
 
 
-    def search_to_h5(self, code, save_path, start_year=2007):
+    def search_to_h5(self, code, save_path, start_year=2007, mode='a'):
+        h5file = tables.open_file(save_path, mode=mode)
 
-        stock_datas = self.search(code, start_year)
+        end_year = datetime.date.today().year + 1
 
-        h5file = tables.open_file(save_path, 'w')
         try:
 
-            stocks_group = h5file.create_group("/", 'stock', 'Stock Information')
-            stock_table = h5file.create_table(stocks_group, 'stocks', Stocks, "Stock Table")
+            if '/stock' not in h5file:
+                stocks_group = h5file.create_group('/', 'stock', 'Stock Information')
+            else:
+                stocks_group = h5file.get_node('/stock')
+
+            if '/stock/stocks' not in h5file:
+                stock_table = h5file.create_table(stocks_group, 'stocks', Stocks, "Stock Table")
+            else:
+                stock_table = h5file.get_node('/stock/stocks')
             stock = stock_table.row
 
-            detail_table = h5file.create_table(stocks_group, 'details', StockDetails, "Stock Detail Table")
+            if '/stock/details' not in h5file:
+                detail_table = h5file.create_table(stocks_group, 'details', StockDetails, "Stock Detail Table")
+            else:
+                detail_table = h5file.get_node('/stock/details')
             detail = detail_table.row
 
-            url = self.start_url % id
-            logger.info('Load Url: %s' % url)
-            self.lr.load(url)
+            h5file.flush()
 
-            _start_year = self.lr.xpaths('//select[@name="year"]/option')[-1].attrib['value'].strip()
-            if _start_year < '2004':
-                _start_year = '2004'
-            _start_year = int(_start_year)
-            if start_year < _start_year:
-                start_year = _start_year
+            last_data = stock_table[-1]
+            if last_data:
+                last_date = last_data[0].split('_')[-1]
+                start_year = last_date.split('-')[0]
 
-            for year in range(start_year, 2017):
-                for jidu in range(1, 5):
+            else:
+                last_date = '2007-01-01'
+                last_year = '2007'
+
+                url = self.start_url % code
+                logger.info('Load Url: %s' % url)
+                self.lr.load(url)
+
+                _start_year = self.lr.xpaths('//select[@name="year"]/option')[-1].attrib['value'].strip()
+                if _start_year < '2007':
+                    _start_year = '2007'
+
+                _start_year = int(_start_year)
+                if start_year < _start_year:
+                    start_year = _start_year
+
+            t = datetime.datetime.strptime(last_date, '%Y-%m-%d')
+            quarter = pd.Timestamp(t).quarter
+            start_year = int(start_year)
+            for year in range(start_year, end_year):
+                for quarter in range(quarter, 5):
                     try:
-                        _url = self.url_format % (id, year, jidu)
-                        logger.info('Load: %s: %s' % (id, _url))
+                        _url = self.url_format % (code, year, quarter)
+                        logger.info('Load: %s: %s' % (code, _url))
                         self.lr.load(_url)
 
                         if self.lr.body.find('FundHoldSharesTable') > -1:
@@ -195,6 +223,9 @@ class LStockData():
                                     _date = record.xpath('./td[1]/div/a')[0].text.strip()
                                     detail_url = record.xpath('./td[1]/div/a')[0].attrib['href'].strip()
 
+                                if _date <= last_date:
+                                    continue
+
                                 _opening_price = record.xpath('./td[2]/div')[0].text.strip()
                                 _highest_price = record.xpath('./td[3]/div')[0].text.strip()
                                 _closing_price = record.xpath('./td[4]/div')[0].text.strip()
@@ -202,7 +233,7 @@ class LStockData():
                                 _trading_volume = record.xpath('./td[6]/div')[0].text.strip()
                                 _transaction_amount = record.xpath('./td[7]/div')[0].text.strip()
 
-                                _id = '%s_%s' % (id, _date)
+                                _id = '%s_%s' % (code, _date)
 
                                 details = []
                                 if detail_url:
@@ -211,7 +242,7 @@ class LStockData():
                                     detail_down_url = 'http://market.finance.sina.com.cn/downxls.php?date=%s&symbol=%s' % (
                                     params['date'][0], params['symbol'][0])
                                     self.lr.load(detail_down_url)
-                                    logger.info('Load Detail: %s: %s' % (id, detail_down_url))
+                                    logger.info('Load Detail: %s: %s' % (code, detail_down_url))
 
                                     if self.lr.body.find('language="javascript"') < 0:
                                         for line in self.lr.body.decode('gbk').splitlines()[1:]:
@@ -268,7 +299,9 @@ class LStockData():
                     except:
                         raise
 
-            stock_table.flush()
+                quarter = 1
+            # stock_table.flush()
+            h5file.flush()
         except:
             # logger.error(traceback.format_exc())
             raise
@@ -348,4 +381,4 @@ if __name__ == '__main__':
     # for data in ls.search(id, start_year):
     #     print data
 
-    ls.search_to_h5(id, 'F:\\603858.h5', start_year)
+    ls.search_to_h5(id, 'F:\\002108.h5') # , start_year)
