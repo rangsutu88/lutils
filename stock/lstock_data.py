@@ -40,6 +40,8 @@ class LStockData():
     start_url = 'http://money.finance.sina.com.cn/corp/go.php/vMS_MarketHistory/stockid/%s.phtml'
     url_format = 'http://money.finance.sina.com.cn/corp/go.php/vMS_MarketHistory/stockid/%s.phtml?year=%s&jidu=%s'
 
+    real_time_date_url = 'http://hq2fls.eastmoney.com/EM_Quote2010PictureApplication/Flash.aspx?Type=CR&ID=6035771&r=0.8572017126716673'
+
     def __init__(self): #, input, output, **kwargs):
         # threading.Thread.__init__(self)
 
@@ -180,8 +182,8 @@ class LStockData():
 
             h5file.flush()
 
-            last_data = stock_table[-1]
-            if last_data:
+            if stock_table.nrows > 0:
+                last_data = stock_table[-1]
                 last_date = last_data[0].split('_')[-1]
                 start_year = last_date.split('-')[0]
 
