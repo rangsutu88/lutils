@@ -327,6 +327,11 @@ class LRequest(object):
                 logger.error(traceback.format_exc())
             raise
 
+    def load_img(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,):
+
+        return self.load(url, method=method, data=data, timeout=timeout, is_xpath=False)
+
+
     def load_file(self, file_path):
         self.loads(open(file_path, 'r').read())
 
