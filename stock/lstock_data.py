@@ -16,24 +16,26 @@ logger = logging.getLogger('lutils')
 
 
 class Stocks(IsDescription):
-    id                  = StringCol(20, pos=1)
-    opening_price       = Float32Col(pos=2)
-    highest_price       = Float32Col(pos=3)
-    closing_price       = Float32Col(pos=4)
-    floor_price         = Float32Col(pos=5)
-    trading_volume      = Int64Col(pos=6)
-    transaction_amount  = Int64Col(pos=7)
+    # id         = StringCol(20, pos=1)
+    date       = Int64Col(pos=1)
+    open       = Float32Col(pos=2)
+    close      = Float32Col(pos=3)
+    high       = Float32Col(pos=4)
+    low        = Float32Col(pos=5)
+    volume     = Int64Col(pos=6)
+    amount     = Int64Col(pos=7)
     # details             = StringCol
 
 
 class StockDetails(IsDescription):
-    id                  = StringCol(20, pos=1) # stock code_date
-    time                = StringCol(10, pos=2)
-    price               = Float32Col(pos=3)
-    price_change        = Float32Col(pos=4)
-    volume              = Int64Col(pos=5)
-    turnover            = Int64Col(pos=6)
-    nature              = StringCol(20, pos=7)
+    # id                  = StringCol(20, pos=1) # stock code_date
+    date            = Int64Col(pos=1)
+    time            = StringCol(10, pos=2)
+    price           = Float32Col(pos=3)
+    price_change    = Float32Col(pos=4)
+    volume          = Int64Col(pos=5)
+    turnover        = Int64Col(pos=6)
+    nature          = StringCol(20, pos=7)
 
 class LStockData():
 
@@ -146,7 +148,7 @@ class LStockData():
 
                                 # stock_file.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' % (_id, _opening_price, _highest_price, _closing_price, _floor_price, _trading_volume, _transaction_amount, json.dumps(details)))
 
-                                stock_datas.append((_id, _opening_price, _highest_price, _closing_price, _floor_price, _trading_volume, _transaction_amount, details))
+                                stock_datas.append((_id, _opening_price, _closing_price, _highest_price, _floor_price, _trading_volume, _transaction_amount, details))
                     except :
                         raise
 
@@ -188,16 +190,16 @@ class LStockData():
                 start_year = last_date.split('-')[0]
 
             else:
-                last_date = '2007-01-01'
-                last_year = '2007'
+                last_date = '1990-01-01'
+                last_year = '1990'
 
                 url = self.start_url % code
                 logger.info('Load Url: %s' % url)
                 self.lr.load(url)
 
                 _start_year = self.lr.xpaths('//select[@name="year"]/option')[-1].attrib['value'].strip()
-                if _start_year < '2007':
-                    _start_year = '2007'
+                # if _start_year < '2007':
+                #     _start_year = '2007'
 
                 _start_year = int(_start_year)
                 if start_year < _start_year:
@@ -214,7 +216,7 @@ class LStockData():
                         self.lr.load(_url)
 
                         if self.lr.body.find('FundHoldSharesTable') > -1:
-                            records = list(self.lr.xpaths('//table[@id="FundHoldSharesTable"]/tr')[1:])
+                            records = list(self.lr.xpaths('//table[@id="FundHoldSharesTable"]//tr')[2:])
                             records.reverse()
 
                             for record in records:
@@ -236,6 +238,7 @@ class LStockData():
                                 _transaction_amount = record.xpath('./td[7]/div')[0].text.strip()
 
                                 _id = '%s_%s' % (code, _date)
+                                _date = _date.replace('-', '')
 
                                 details = []
                                 if detail_url:
@@ -277,8 +280,8 @@ class LStockData():
 
                                 details.reverse()
                                 for d in details:
-                                    detail['id'] = _id
-
+                                    # detail['id'] = _id
+                                    detail['date'] = _date
                                     detail['time'] = d['time']
                                     detail['price'] = d['price'].split(u'\u0000', 1)[0] if d['price'] else 0.0
                                     detail['price_change'] = d['price_change']
@@ -289,13 +292,14 @@ class LStockData():
                                     detail.append()
 
 
-                                stock['id'] = _id
-                                stock['opening_price'] = _opening_price
-                                stock['highest_price'] = _highest_price
-                                stock['closing_price'] = _closing_price
-                                stock['floor_price'] = _floor_price
-                                stock['trading_volume'] = _trading_volume
-                                stock['transaction_amount'] = _transaction_amount
+                                # stock['id'] = _id
+                                stock['date'] = _date
+                                stock['open'] = _opening_price
+                                stock['high'] = _highest_price
+                                stock['close'] = _closing_price
+                                stock['low'] = _floor_price
+                                stock['volume'] = _trading_volume
+                                stock['amount'] = _transaction_amount
 
                                 stock.append()
                     except:
