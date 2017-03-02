@@ -69,11 +69,14 @@ def detail_reindex(func):
 
         datas = func(*args, **kwargs)
 
-        datas.loc[:,'id'] = datas['id'].str.split('_', 1, expand=True).ix[:,1]
-        _datas = datas.set_index([datas['id'], datas['time']])
+        # datas.loc[:,'id'] = datas['id'].str.split('_', 1, expand=True).ix[:,1]
+        # _datas = datas.set_index([datas['id'], datas['time']])
+        # _datas.drop(['id', 'time'], axis=1, inplace=True)
 
-        _datas.drop(['id', 'time'], axis=1, inplace=True)
+        # gc.collect()
+        # return _datas
 
+        _datas = datas.set_index(datas['date'])
         gc.collect()
         return _datas
 
@@ -86,10 +89,14 @@ def stock_reindex(func):
     def wrapped(*args, **kwargs):
         datas = func(*args, **kwargs)
 
-        datas.loc[:,'id'] = datas['id'].str.split('_', 1, expand=True).ix[:,1]
-        _datas = datas.set_index(datas['id'])
+        # datas.loc[:,'id'] = datas['id'].str.split('_', 1, expand=True).ix[:,1]
+        # _datas = datas.set_index(datas['id'])
+        # _datas.drop('id', axis=1, inplace=True)
 
-        _datas.drop('id', axis=1, inplace=True)
+        # gc.collect()
+        # return _datas
+
+        _datas = datas.set_index(datas['date'])
 
         gc.collect()
         return _datas
