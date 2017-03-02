@@ -57,7 +57,6 @@ def generator_header():
 class LRequests(object):
     def __init__(self, string_proxy=None, request_header=None, timeout=90, debuglevel=0, **kwargs):
 
-
         self.timeout = timeout
         self.headers = generator_header()
 
@@ -68,53 +67,85 @@ class LRequests(object):
         if string_proxy:
             self.session.proxies = {'http': string_proxy, 'https': string_proxy}
 
+        self._body = None
 
-    def open(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, is_xpath=True, stream=False):
 
-        response = self.session.request(method, url, data=data, timeout=self.timeout, allow_redirects=True) # , stream=stream
-#        response = self.session.get(url, data=data, timeout=self.timeout, stream=stream)
+    def open(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, isdecode=False, repeat=3, is_xpath=True, stream=False):
+        while True:
+            try:
+                if isinstance(url, basestring):
 
-        self.body = response, is_xpath, stream
+                    response = self.session.request(method, url, data=data, timeout=self.timeout, allow_redirects=True, stream=stream, headers=self.headers) # , stream=stream
+            #        response = self.session.get(url, data=data, timeout=self.timeout, stream=stream)
 
-        return response
+                elif isinstance(url, urllib2.Request):
+                    response = self.session.request(url.get_method(), url.get_full_url(), data=url.get_data(), timeout=self.timeout, allow_redirects=True)
+
+                self.body = response, is_xpath, stream
+                self.current_url = response.url
+                return response
+            except:
+                repeat = repeat - 1
+                if not repeat:
+                    raise
+
 
     def load(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, is_xpath=True, stream=False):
 
         return self.open(url, method=method, data=data, timeout=timeout, is_xpath=is_xpath, stream=stream)
 
-    def getForms(self, url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, is_xpath=False):
+    def load_img(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, stream=True):
+
+        return self.open(url, method=method, data=data, timeout=timeout, is_xpath=False, stream=stream)
+
+    def load_file(self, file_path):
+        self.loads(open(file_path, 'r').read())
+
+    def loads(self, page_str, url=''):
+        self.current_url = url
+        self.body = page_str, True, False
+
+    def getForms(self, url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, isdecode=False,  repeat=3, is_xpath=False):
+        return self.get_forms_by_url(url, data, timeout, isdecode, repeat, is_xpath)
+
+    def get_forms_by_url(self, url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, isdecode=False, repeat=3, is_xpath=False):
         try:
             if timeout is socket._GLOBAL_DEFAULT_TIMEOUT:
-                timeout = self.timeout
-            response = self.open(url, data=data, timeout=timeout, is_xpath=is_xpath)
-            return ParseFile(io.StringIO(str(BeautifulSoup(self.body)).replace('<br/>', '').replace('<hr/>', '')), response.url, backwards_compat=False)
+                timeout = self._timeout
+            response = None
+            response = self.open(url, data, timeout, isdecode, repeat, is_xpath)
+            return ParseFile(io.StringIO(str(BeautifulSoup(self.body, 'lxml')).replace('<br/>', '').replace('<hr/>', '')), response.geturl(), backwards_compat=False)
         except:
             raise
+        finally:
+            if response:
+                del response
+
+    def get_forms(self):
+        return ParseFile(io.StringIO(str(BeautifulSoup(self.body, 'lxml'))), self.current_url, backwards_compat=False) # .replace('<br/>', '').replace('<hr/>', '')
 
 
-    def getBody(self):
+    @property
+    def body(self):
         return self._body
 
-    def setBody(self, params):
+    @body.setter
+    def body(self, value):
         try:
-            response, is_xpath, stream = params
-
-
+            response, is_xpath, stream = value
             self._body = ''
             if stream:
-                self._body = response.raw
+                self._body = response.raw.data
             else:
-                self._body = response.text
-
-            if is_xpath:
-                self.tree = html.fromstring(str(BeautifulSoup(self.body)))
+                if isinstance(response, basestring):
+                    self._body = response
+                else:
+                    self._body = response.text.encode('utf-8')
+                if is_xpath:
+                    self.tree = html.fromstring(str(BeautifulSoup(self.body, 'lxml')))
         except :
             raise
 
-    def delBody(self):
-        del self._body
-
-    body = property(getBody, setBody, delBody, "http response text property.")
 
     def xpath(self, xpath):
         eles = self.tree.xpath(xpath)
@@ -144,7 +175,7 @@ if __name__ == '__main__':
     # import shutil
     # shutil.copyfileobj(l.body, open('D:\\xxx.jpg', 'wb'))
 
-    lr = LRequests(string_proxy='socks5://:@192.168.1.188:1080')
+    lr = LRequests(string_proxy='socks5://192.168.1.188:1080')
     lr.load('http://www.google.com')
 
     print lr.body
