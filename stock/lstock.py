@@ -8,8 +8,9 @@ import gc
 import numpy as np
 import pandas as pd
 import tables as tb
+from stockstats import StockDataFrame
 
-pd.set_option('expand_frame_repr', False)
+# pd.set_option('expand_frame_repr', False)
 
 from decorators import *
 
@@ -40,9 +41,9 @@ class LStock():
     def clear_stock(self, datas):
         return datas
 
-    def get_stock(self, h5file):
+    def get_stock(self, h5file, ):
         stock_datas = pd.read_hdf(h5file, '/stock/stocks')
-        return self.clear_stock(datas=stock_datas)
+        return StockDataFrame(self.clear_stock(datas=stock_datas))
 
     def get_detail(self, h5file):
         detail_datas = pd.read_hdf(h5file, '/stock/details')
