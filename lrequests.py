@@ -14,6 +14,7 @@ import datetime
 import httplib
 import logging
 import requests # requesocks
+from requests.packages.urllib3.contrib.socks import SOCKSHTTPSConnectionPool, SOCKSHTTPConnectionPool
 if sys.version_info[0] >= 3:
     from http import cookiejar
     from urllib.parse import urlparse
@@ -56,7 +57,7 @@ def generator_header():
 
 class LRequests(object):
     def __init__(self, string_proxy=None, request_header=None, timeout=90, debuglevel=0, **kwargs):
-
+        self.debuglevel = debuglevel
         self.timeout = timeout
         self.headers = generator_header()
 
@@ -79,15 +80,24 @@ class LRequests(object):
             #        response = self.session.get(url, data=data, timeout=self.timeout, stream=stream)
 
                 elif isinstance(url, urllib2.Request):
-                    response = self.session.request(url.get_method(), url.get_full_url(), data=url.get_data(), timeout=self.timeout, allow_redirects=True)
+                    response = self.session.request(url.get_method(), url.get_full_url(), data=url.get_data(), timeout=self.timeout, allow_redirects=True, headers=self.headers)
 
                 self.body = response, is_xpath, stream
                 self.current_url = response.url
                 return response
-            except:
+            except (SOCKSHTTPSConnectionPool, SOCKSHTTPConnectionPool, urllib2.HTTPError, urllib2.URLError, httplib.BadStatusLine, socket.timeout, socket.error, IOError, httplib.IncompleteRead, socks.ProxyConnectionError, socks.SOCKS5Error) as e:
                 repeat = repeat - 1
+                if isinstance(e, urllib2.HTTPError):
+                    if e.code in NOT_REQUEST_CODE:
+                        raise
+                time.sleep(random.randrange(10, 30))
                 if not repeat:
                     raise
+
+            # except:
+            #     repeat = repeat - 1
+            #     if not repeat:
+            #         raise
 
 
     def load(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, is_xpath=True, stream=False):
@@ -95,7 +105,8 @@ class LRequests(object):
         return self.open(url, method=method, data=data, timeout=timeout, is_xpath=is_xpath, stream=stream)
 
     def load_img(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, stream=True):
-
+        if self.debuglevel:
+            logger.info('Load Image: %s' % url)
         return self.open(url, method=method, data=data, timeout=timeout, is_xpath=False, stream=stream)
 
     def load_file(self, file_path):
