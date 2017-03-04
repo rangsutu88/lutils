@@ -10,6 +10,7 @@ import datetime
 import tables
 import pandas as pd
 from tables import *
+from bs4 import BeautifulSoup
 from ..lrequest import LRequest
 
 logger = logging.getLogger('lutils')
@@ -158,7 +159,7 @@ class LStockData():
             raise
 
 
-    def search_to_h5(self, code, save_path, start_year=2007, mode='a'):
+    def search_to_h5(self, code, save_path, start_year=2007, mode='a', is_detail=True):
         h5file = tables.open_file(save_path, mode=mode)
 
         end_year = datetime.date.today().year + 1
@@ -240,56 +241,57 @@ class LStockData():
                                 _id = '%s_%s' % (code, _date)
                                 _date = _date.replace('-', '')
 
-                                details = []
-                                if detail_url:
+                                if is_detail:
+                                    details = []
+                                    if detail_url:
 
-                                    params = urlparse.parse_qs(urlparse.urlparse(detail_url).query, True)
-                                    detail_down_url = 'http://market.finance.sina.com.cn/downxls.php?date=%s&symbol=%s' % (
-                                    params['date'][0], params['symbol'][0])
-                                    self.lr.load(detail_down_url)
-                                    logger.info('Load Detail: %s: %s' % (code, detail_down_url))
+                                        params = urlparse.parse_qs(urlparse.urlparse(detail_url).query, True)
+                                        detail_down_url = 'http://market.finance.sina.com.cn/downxls.php?date=%s&symbol=%s' % (
+                                        params['date'][0], params['symbol'][0])
+                                        self.lr.load(detail_down_url)
+                                        logger.info('Load Detail: %s: %s' % (code, detail_down_url))
 
-                                    if self.lr.body.find('language="javascript"') < 0:
-                                        for line in self.lr.body.decode('gbk').splitlines()[1:]:
-                                            nature = ''
-                                            try:
-                                                t, price, _price_change, volume, turnover, _nature = line.strip().split('	')
-                                            except:
-                                                logger.info(line)
-                                                raise
-                                            if _nature == u'卖盘':
-                                                nature = 'sell'
-                                            elif _nature == u'买盘':
-                                                nature = 'buy'
-                                            elif _nature == u'中性盘':
-                                                nature = 'neutral_plate'
-                                            else:
-                                                nature = _nature
+                                        if self.lr.body.find('language="javascript"') < 0:
+                                            for line in self.lr.body.decode('gbk').splitlines()[1:]:
+                                                nature = ''
+                                                try:
+                                                    t, price, _price_change, volume, turnover, _nature = line.strip().split('	')
+                                                except:
+                                                    logger.info(line)
+                                                    raise
+                                                if _nature == u'卖盘':
+                                                    nature = 'sell'
+                                                elif _nature == u'买盘':
+                                                    nature = 'buy'
+                                                elif _nature == u'中性盘':
+                                                    nature = 'neutral_plate'
+                                                else:
+                                                    nature = _nature
 
-                                            price_change = '0.0'
-                                            if _price_change != '--':
-                                                price_change = _price_change
+                                                price_change = '0.0'
+                                                if _price_change != '--':
+                                                    price_change = _price_change
 
-                                            details.append({'time': t,
-                                                            'price': price,
-                                                            'price_change': price_change,
-                                                            'volume': volume,
-                                                            'turnover': turnover,
-                                                            'nature': nature, })
+                                                details.append({'time': t,
+                                                                'price': price,
+                                                                'price_change': price_change,
+                                                                'volume': volume,
+                                                                'turnover': turnover,
+                                                                'nature': nature, })
 
 
-                                details.reverse()
-                                for d in details:
-                                    # detail['id'] = _id
-                                    detail['date'] = _date
-                                    detail['time'] = d['time']
-                                    detail['price'] = d['price'].split(u'\u0000', 1)[0] if d['price'] else 0.0
-                                    detail['price_change'] = d['price_change']
-                                    detail['volume'] = d['volume']
-                                    detail['turnover'] = d['turnover']
-                                    detail['nature'] = d['nature']
+                                    details.reverse()
+                                    for d in details:
+                                        # detail['id'] = _id
+                                        detail['date'] = _date
+                                        detail['time'] = d['time']
+                                        detail['price'] = d['price'].split(u'\u0000', 1)[0] if d['price'] else 0.0
+                                        detail['price_change'] = d['price_change']
+                                        detail['volume'] = d['volume']
+                                        detail['turnover'] = d['turnover']
+                                        detail['nature'] = d['nature']
 
-                                    detail.append()
+                                        detail.append()
 
 
                                 # stock['id'] = _id
@@ -315,7 +317,7 @@ class LStockData():
             h5file.close()
 
 def get_all_codes():
-    stock_code_url = 'http://quote.eastmoney.com/stocklist.html'
+    stock_code_url = 'http://quote.eastmoney.com/stocklist.html' # us: http://quote.eastmoney.com/usstocklist.html
     exchanges = ['ss', 'sz', 'hk']
 
     lr = LRequest()
@@ -357,13 +359,40 @@ def get_new_stock_code(year=None):
         u = urlparse.urljoin('http://quotes.money.163.com/data/ipo/shengou.html', ele.attrib['href'])
 
         lr.load(u)
-        lr.loads(BeautifulSoup(lr.body).prettify())
+        lr.loads(BeautifulSoup(lr.body, 'lxml').prettify())
 
         for ce in lr.xpaths('//table[@id="plate_performance"]/tr/td[3]'):  # codes
             # print ce.text.strip()
             stock_codes.append(ce.text.strip())
 
     return stock_codes
+
+
+def get_codes():
+    codes = []
+    urls = ['http://app.finance.ifeng.com/list/stock.php?t=ha&f=symbol&o=asc',
+            'http://app.finance.ifeng.com/list/stock.php?t=sa&f=symbol&o=asc']
+
+    lr = LRequest()
+    for url in urls:
+        logger.info('Load: %s' % url)
+        lr.load(url)
+
+
+        while 1:
+            for ele in lr.xpaths('//div[@class="tab01"]/table//td[1]/a')[:-1]:
+                code = ele.text.strip()
+                if code.isdigit():
+                    codes.append(code)
+
+            next_ele = lr.xpath(u'//a[contains(text(), "下一页")]')
+            if next_ele is None:
+                break
+            next_url = urlparse.urljoin(url, next_ele.attrib['href'])
+            logger.info('Load: %s' % next_url)
+            lr.load(next_url)
+
+    return codes
 
 
 if __name__ == '__main__':
