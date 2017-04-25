@@ -503,6 +503,8 @@ if __name__ == '__main__':
     # lr = LRequest()
     # f = lr.getForms('http://mail.163.com/')[0]
     #
+    # f['username'] = 'xx'
+    # f['password'] = 'xx'
     # lr.load(f.click())
     #
     # lr.save_cookies()
@@ -514,13 +516,16 @@ if __name__ == '__main__':
     # print lr.body
 
     # BITVISE_HOME = 'D:/tools/Bitvise SSH Client'
+    lr = LRequest(string_proxy='ssh://xx:xx@96.44.185.84:22')
 
+    lr.load('http://www.google.com')
     print lr.body
 
     # import conf, time
     # from bitvise import Bitvise
     # conf.BITVISE_HOME = 'D:/tools/Bitvise SSH Client'
     #
+    # b = Bitvise('150.95.130.30', 22, username='xx', password='xx', forwarding_ip='192.168.1.101', forwarding_port=1081)
     # b.start()
     # print 'sssss'
     # while 1:
