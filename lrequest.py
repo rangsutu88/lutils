@@ -29,8 +29,8 @@ from lxml import html
 from bs4 import BeautifulSoup
 from ClientForm import ParseFile
 from lutils.socksipyhandler import SocksiPyHandler, SocksiPysHandler
-
-from lutils import read_random_lines, LUTILS_ROOT, _clean
+from lutils.bitvise import Bitvise
+from lutils import read_random_lines, LUTILS_ROOT, _clean, free_port
 
 
 __all__ = ['LRequest', 'LRequestCookie']
@@ -40,8 +40,6 @@ __all__ = ['LRequest', 'LRequestCookie']
 logger = logging.getLogger('lutils')
 
 NOT_REQUEST_CODE = [404, ]
-
-
 
 header_path = os.path.join(LUTILS_ROOT, 'header')
 USER_AGENT_DIR = os.path.join(LUTILS_ROOT, 'user_agent')
@@ -169,6 +167,12 @@ def find_open_port(min_port=5000, max_port=10000):
             time.sleep(0.5)
             port = port + random.randint(1, 300)
 
+
+
+
+def getaddrinfo(*args):
+    return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (args[0], args[1]))]
+
 class LRequest(object):
     '''
     form = lr.get_forms()[0]
@@ -196,13 +200,17 @@ class LRequest(object):
         self.tree = None
 
         if string_proxy:
+            socket.getaddrinfo = getaddrinfo
             urlinfo = urlparse.urlparse(string_proxy)
             if urlinfo.scheme == 'ssh':
-            # TODO ssh tunnel open
-#                if self.tunnel.login(urlinfo.hostname, urlinfo.username, urlinfo.password, port=urlinfo.port, proxyport=localprot):
-#                    socksiPyHandler = SocksiPyHandler(proxyargs=(socks.PROXY_TYPE_SOCKS5, '127.0.0.1', localprot, True, None, None), debuglevel=debuglevel)
-#                    socksiPysHandler = SocksiPysHandler(proxyargs=(socks.PROXY_TYPE_SOCKS5, '127.0.0.1', localprot, True, None, None), debuglevel=debuglevel)
-                pass
+                # forwarding_ip = socket.gethostbyname(socket.gethostname())
+                # forwarding_port = free_port()
+                self.bitvise = Bitvise(urlinfo.hostname, urlinfo.port, username=urlinfo.username, password=urlinfo.password) #, forwarding_ip=forwarding_ip, forwarding_port=forwarding_port)
+                forwarding_ip, forwarding_port = self.bitvise.start()
+
+                # if self.tunnel.login(urlinfo.hostname, urlinfo.username, urlinfo.password, port=urlinfo.port, proxyport=localprot):
+                socksiPyHandler = SocksiPyHandler(proxyargs=(socks.PROXY_TYPE_SOCKS5, forwarding_ip, forwarding_port, True, None, None), debuglevel=debuglevel)
+                socksiPysHandler = SocksiPysHandler(proxyargs=(socks.PROXY_TYPE_SOCKS5, forwarding_ip, forwarding_port, True, None, None), debuglevel=debuglevel)
             elif urlinfo.scheme == 'socks5':
                 socksiPyHandler = SocksiPyHandler(proxyargs=(socks.PROXY_TYPE_SOCKS5, urlinfo.hostname, urlinfo.port, True, urlinfo.username, urlinfo.password), debuglevel=debuglevel)
                 socksiPysHandler = SocksiPysHandler(proxyargs=(socks.PROXY_TYPE_SOCKS5, urlinfo.hostname, urlinfo.port, True, urlinfo.username, urlinfo.password), debuglevel=debuglevel)
@@ -491,21 +499,32 @@ LRequestCookie = LRequestMozillaCookie
 
 
 if __name__ == '__main__':
-##    lr = LRequestCookie(cookie_path='d:\\cc.cookies')
-#    lr = LRequest()
-#    f = lr.getForms('http://mail.163.com/')[0]
-#
-#    f['username'] = 'xt_master'
-#    f['password'] = 'xt330300364'
-#    lr.load(f.click())
-#
-##    lr.save_cookies()
+    # lr = LRequestCookie(cookie_path='d:\\cc.cookies')
+    # lr = LRequest()
+    # f = lr.getForms('http://mail.163.com/')[0]
+    #
+    # lr.load(f.click())
+    #
+    # lr.save_cookies()
+    #
+    # generator_header()
+    #
+    # lr = LRequest()
+    # lr.load('http://www.baidu.com', data={'aaa': 'bbb'})
+    # print lr.body
 
-#    generator_header()
+    # BITVISE_HOME = 'D:/tools/Bitvise SSH Client'
 
-    lr = LRequest()
-    lr.load('http://www.baidu.com', data={'aaa': 'bbb'})
     print lr.body
+
+    # import conf, time
+    # from bitvise import Bitvise
+    # conf.BITVISE_HOME = 'D:/tools/Bitvise SSH Client'
+    #
+    # b.start()
+    # print 'sssss'
+    # while 1:
+    #     time.sleep(1)
 
 
 

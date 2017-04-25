@@ -34,11 +34,14 @@ from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.common.exceptions import NoSuchElementException
 
 from lutils import read_random_lines, LUTILS_ROOT, _clean
-
-
+from lutils.bitvise import Bitvise
+from lutils import free_port
+from lutils import conf
 PHANTOMJS_PATH = os.path.join(LUTILS_ROOT, 'phantomjs/phantomjs.exe')
 USER_AGENT_DIR = os.path.join(LUTILS_ROOT, 'user_agent')
-GECKODRIVER = os.path.join(LUTILS_ROOT, 'geckodriver')
+#GECKODRIVER = os.path.join(LUTILS_ROOT, 'geckodriver')
+GECKODRIVER = conf.GECKODRIVER_HOME
+
 
 try:
     import http.client as http_client
@@ -49,8 +52,8 @@ logger = logging.getLogger('lutils')
 
 class LFirefoxProfile(firefox_profile.FirefoxProfile):
 
-    def __init__(self, profile_directory=None, is_temp=False):
-        self.is_temp = is_temp
+    def __init__(self, profile_directory=None): #, is_temp=False):
+        # self.is_temp = is_temp
         if not firefox_profile.FirefoxProfile.DEFAULT_PREFERENCES:
             with open(os.path.join(os.path.dirname(firefox_profile.__file__), firefox_profile.WEBDRIVER_PREFERENCES)) as default_prefs:
                 firefox_profile.FirefoxProfile.DEFAULT_PREFERENCES = json.load(default_prefs)
@@ -62,7 +65,7 @@ class LFirefoxProfile(firefox_profile.FirefoxProfile):
         self.tempfolder = None
         if self.profile_dir is None:
             self.profile_dir = self._create_tempfolder()
-        elif is_temp:
+        else: # is_temp:
             self.tempfolder = tempfile.mkdtemp()
             newprof = os.path.join(self.tempfolder, "webdriver-py-profilecopy")
             shutil.copytree(self.profile_dir, newprof,
@@ -77,6 +80,8 @@ class LFirefoxProfile(firefox_profile.FirefoxProfile):
         addons = [os.path.join(_ext_path, a) for a in os.listdir(_ext_path)]
         for addon in addons:
             self.add_extension(addon)
+
+        # super(LFirefoxProfile, self).__init__(profile_directory=profile_directory)
 
     def _install_extension(self, addon, unpack=True):
         if addon == firefox_profile.WEBDRIVER_EXT:
@@ -355,7 +360,7 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
 
     def _init_instance(self, firefox_profile=None, firefox_binary=None, string_proxy=None, timeout=180, capabilities=None, proxy=None, profile_preferences={}, **kwargs):
         if firefox_profile is None:
-            firefox_profile = LFirefoxProfile(profile_directory=kwargs.get('profile_directory', None), is_temp=kwargs.get('is_temp', False))
+            firefox_profile = LFirefoxProfile(profile_directory=kwargs.get('profile_directory', None)) #, is_temp=kwargs.get('is_temp', False))
 
         firefox_profile.set_preference('browser.cache.disk.capacity', 131072)
         firefox_profile.set_preference('browser.cache.disk.smart_size.enabled', False)
@@ -365,13 +370,29 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
         firefox_profile.set_preference('datareporting.healthreport.uploadEnabled', False)
         firefox_profile.set_preference('datareporting.healthreport.service.firstRun', False)
 
+        firefox_profile.set_preference('webdriver.firefox.profile', 'D:\\profiles\\xx')
+
+
         firefox_profile.set_preference('network.proxy.type', 0)
         if string_proxy:
-            proxyinfo = urlparse.urlparse(string_proxy)
-            if proxyinfo.scheme == 'socks5':
+            urlinfo = urlparse.urlparse(string_proxy)
+
+            if urlinfo.scheme == 'ssh':
+                # forwarding_ip = socket.gethostbyname(socket.gethostname())
+                # forwarding_port = free_port()
+
+                self.bitvise = Bitvise(urlinfo.hostname, urlinfo.port, username=urlinfo.username, password=urlinfo.password) #, forwarding_ip=forwarding_ip, forwarding_port=forwarding_port)
+                forwarding_ip, forwarding_port = self.bitvise.start()
+                time.sleep(2)
+                # if self.tunnel.login(urlinfo.hostname, urlinfo.username, urlinfo.password, port=urlinfo.port, proxyport=localprot):
                 firefox_profile.set_preference('network.proxy.type', 1)
-                firefox_profile.set_preference('network.proxy.socks', proxyinfo.hostname)
-                firefox_profile.set_preference('network.proxy.socks_port', proxyinfo.port)
+                firefox_profile.set_preference('network.proxy.socks', forwarding_ip)
+                firefox_profile.set_preference('network.proxy.socks_port', forwarding_port)
+                firefox_profile.set_preference('network.proxy.socks_remote_dns', True)
+            elif urlinfo.scheme == 'socks5':
+                firefox_profile.set_preference('network.proxy.type', 1)
+                firefox_profile.set_preference('network.proxy.socks', urlinfo.hostname)
+                firefox_profile.set_preference('network.proxy.socks_port', urlinfo.port)
                 firefox_profile.set_preference('network.proxy.socks_remote_dns', True)
 
         if kwargs.get('random_ua', False):
@@ -383,10 +404,10 @@ class Browser(webdriver.Firefox, webdriver.Remote, BrowserMixin):
             firefox_profile.set_preference(k, v)
 
         # if sys.platform == 'win32':
-        #     executable_path = os.path.join(GECKODRIVER, 'geckodriver_x64.exe')
+        #     executable_path = os.path.join(conf.GECKODRIVER_HOME, 'geckodriver.exe')
         # else:
-        #     executable_path = os.path.join(GECKODRIVER, 'geckodriver_x64')
-        webdriver.Firefox.__init__(self, firefox_profile=firefox_profile, firefox_binary=firefox_binary, timeout=timeout, capabilities=capabilities, proxy=None) # , executable_path=executable_path
+        #     executable_path = os.path.join(conf.GECKODRIVER_HOME, 'geckodriver')
+        webdriver.Firefox.__init__(self, firefox_profile=firefox_profile, firefox_binary=firefox_binary, timeout=timeout, capabilities=capabilities, proxy=None) #, executable_path=executable_path)
 
         self.set_page_load_timeout(self.timeout)
         self.implicitly_wait(self.wait_timeout)
@@ -430,10 +451,10 @@ class BrowserPhantomJS(webdriver.PhantomJS, BrowserMixin):
         desired_capabilities.update(_desired_capabilities)
 
         if string_proxy:
-            proxyinfo = urlparse.urlparse(string_proxy)
-            if proxyinfo.scheme == 'socks5':
+            urlinfo = urlparse.urlparse(string_proxy)
+            if urlinfo.scheme == 'socks5':
                 service_args=[
-                    '--proxy=%s:%s' % (proxyinfo.hostname, proxyinfo.port),
+                    '--proxy=%s:%s' % (urlinfo.hostname, urlinfo.port),
                     '--proxy-type=socks5',
                     ]
 
@@ -466,7 +487,7 @@ class BrowserPhantomJS(webdriver.PhantomJS, BrowserMixin):
 
 if __name__ == '__main__':
     # import time
-    # profile = LFirefoxProfile(profile_directory='K:\\xx\\fff', is_temp=False)
+    # profile = LFirefoxProfile(profile_directory='K:\\xx\\fff') #, is_temp=False)
     # browser = Browser(firefox_profile=profile, timeout=30)
     # browser.implicitly_wait(5)
     # browser.set_script_timeout(10)

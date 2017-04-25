@@ -3,6 +3,7 @@ __author__ = 'xtwxfxk'
 
 import os
 import re
+import socket
 import random
 import bisect
 import codecs
@@ -113,3 +114,11 @@ def _clean(html, remove=['br', 'hr']):
             html = re.compile('<' + tag + '[^>]*?>.*?</' + tag + '>', re.DOTALL | re.IGNORECASE).sub('', html)
             html = re.compile('<' + tag + '[^>]*?>', re.DOTALL | re.IGNORECASE).sub('', html)
     return html
+
+def free_port():
+    free_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    free_socket.bind(('0.0.0.0', 0))
+    free_socket.listen(5)
+    port = free_socket.getsockname()[1]
+    free_socket.close()
+    return port

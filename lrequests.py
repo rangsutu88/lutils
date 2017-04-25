@@ -30,9 +30,9 @@ else:
 from lxml import html
 from bs4 import BeautifulSoup
 from ClientForm import ParseFile
-
+from lutils.bitvise import Bitvise
 from lutils import read_random_lines, LUTILS_ROOT
-
+from lutils.lrequest import free_port, getaddrinfo
 
 __all__ = ['LRequests']
 
@@ -65,7 +65,18 @@ class LRequests(object):
         self.session = requests.session()
 
 #        self.session.headers = self.headers
+
+
         if string_proxy:
+            socket.getaddrinfo = getaddrinfo
+            urlinfo = urlparse.urlparse(string_proxy)
+
+            if urlinfo.scheme == 'ssh':
+                self.bitvise = Bitvise(urlinfo.hostname, urlinfo.port, username=urlinfo.username, password=urlinfo.password)
+                forwarding_ip, forwarding_port = self.bitvise.start()
+
+                string_proxy = 'socks5://%s:%s' % (forwarding_ip, forwarding_port)
+
             self.session.proxies = {'http': string_proxy, 'https': string_proxy}
 
         self._body = None
