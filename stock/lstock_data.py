@@ -189,7 +189,8 @@ class LStockData():
 
             if stock_table.nrows > 0:
                 last_data = stock_table[-1]
-                last_date = last_data[0].split('_')[-1]
+                last_date = str(last_data[0]).split('_')[-1]
+                last_date = '%s-%s-%s' % (last_date[0:4], last_date[4:6], last_date[6:8])
                 start_year = last_date.split('-')[0]
 
             else:
@@ -316,6 +317,7 @@ class LStockData():
             # logger.error(traceback.format_exc())
             raise
         finally:
+            h5file.flush()
             h5file.close()
 
 def get_all_codes():
