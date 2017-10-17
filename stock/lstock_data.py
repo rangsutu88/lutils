@@ -45,11 +45,13 @@ class LStockData():
 
     real_time_date_url = 'http://hq2fls.eastmoney.com/EM_Quote2010PictureApplication/Flash.aspx?Type=CR&ID=6035771&r=0.8572017126716673'
 
-    def __init__(self): #, input, output, **kwargs):
+    def __init__(self, debuglevel=0): #, input, output, **kwargs):
         # threading.Thread.__init__(self)
 
         # self.input = input
         # self.output = output
+
+        self.debuglevel = debuglevel
         self.lr = LRequest()
 
 

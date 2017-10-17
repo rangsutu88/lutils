@@ -8,9 +8,14 @@ import random
 import bisect
 import codecs
 import urlparse
+import logging
+import logging.config
 from bs4 import BeautifulSoup
 
 LUTILS_ROOT = os.path.dirname(__file__)
+
+logging.config.fileConfig(os.path.join(LUTILS_ROOT, 'logging.conf'))
+
 
 def remove_tags(html):
     soup = BeautifulSoup(html)

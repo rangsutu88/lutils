@@ -127,7 +127,7 @@ class LRequests(object):
         self.current_url = url
         self.body = page_str, True, False
 
-    def getForms(self, url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, isdecode=False,  repeat=3, is_xpath=False):
+    def getForms(self, url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, isdecode=False, repeat=3, is_xpath=False):
         return self.get_forms_by_url(url, data, timeout, isdecode, repeat, is_xpath)
 
     def get_forms_by_url(self, url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, isdecode=False, repeat=3, is_xpath=False):

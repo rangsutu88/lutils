@@ -42,7 +42,7 @@ class LStock():
     def clear_stock(self, datas):
         return datas
 
-    def get_stock(self, h5file, ):
+    def get_stock(self, h5file):
         stock_datas = pd.read_hdf(h5file, '/stock/stocks')
         return StockDataFrame(self.clear_stock(datas=stock_datas))
 

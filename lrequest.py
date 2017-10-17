@@ -341,6 +341,12 @@ class LRequest(object):
 
 
     def load_file(self, file_path):
+        '''
+        Load local file
+
+        Args:
+          file_path: file path
+        '''
         self.loads(open(file_path, 'r').read())
 
     def loads(self, page_str, url=''):
