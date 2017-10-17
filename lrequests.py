@@ -85,12 +85,15 @@ class LRequests(object):
     def open(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, isdecode=False, repeat=3, is_xpath=True, stream=False):
         while True:
             try:
-                if isinstance(url, basestring):
 
+                if isinstance(url, basestring):
+                    logger.info('Load URL: %s' % url)
                     response = self.session.request(method, url, data=data, timeout=self.timeout, allow_redirects=True, stream=stream, headers=self.headers) # , stream=stream
             #        response = self.session.get(url, data=data, timeout=self.timeout, stream=stream)
 
                 elif isinstance(url, urllib2.Request):
+                    logger.info('Load URL: %s' % url.get_full_url())
+
                     response = self.session.request(url.get_method(), url.get_full_url(), data=url.get_data(), timeout=self.timeout, allow_redirects=True, headers=self.headers)
 
                 self.body = response, is_xpath, stream
@@ -116,8 +119,8 @@ class LRequests(object):
         return self.open(url, method=method, data=data, timeout=timeout, is_xpath=is_xpath, stream=stream)
 
     def load_img(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, stream=True):
-        if self.debuglevel:
-            logger.info('Load Image: %s' % url)
+        # if self.debuglevel:
+        logger.info('Load Image: %s' % url)
         return self.open(url, method=method, data=data, timeout=timeout, is_xpath=False, stream=stream)
 
     def load_file(self, file_path):

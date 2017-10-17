@@ -235,9 +235,9 @@ class LRequest(object):
         if self.debuglevel > 0:
             logger.info('%s: %s %s: end init' % (datetime.datetime.now().isoformat(), os.getpid(), id(self)))
 
-    def write_log(self, l):
-        if hasattr(self, 'f') and self.f:
-            open(self.f, 'a').write('%s\n' % l)
+    # def write_log(self, l):
+    #     if hasattr(self, 'f') and self.f:
+    #         open(self.f, 'a').write('%s\n' % l)
 
     def init_opener(self, request_header=None, handers=[]):
         self.cookie = DumpCookieJar()
@@ -279,10 +279,14 @@ class LRequest(object):
             if timeout is socket._GLOBAL_DEFAULT_TIMEOUT:
                 timeout = self._timeout
             if isinstance(url, basestring):
+                logger.info('Load URL: %s' % url)
+
                 url = url.replace(' ', '%20')
                 and_reg = re.compile('&amp;')
                 while len(re.findall(and_reg, url)) > 0:
                     url = url.replace('&amp;', '&')
+
+            ### logger.info('Load URL: %s' % url.get_full_url())
 
             for header in append_header:
                 self._opener.addheaders.append(header)
@@ -292,8 +296,9 @@ class LRequest(object):
                     logger.info('lutils header: %s' % (str(h)))
             while True:
                 try:
-                    if self.debuglevel > 0:
-                        logger.info('%s: %s %s: begin opener open' % (datetime.datetime.now().isoformat(), os.getpid(), id(self)))
+                    # if self.debuglevel > 0:
+                    #     logger.info('%s: %s %s: begin opener open' % (datetime.datetime.now().isoformat(), os.getpid(), id(self)))
+
                     response = None
                     if data:
                         response = self._opener.open(url, data=urllib.urlencode(data, doseq=True), timeout=timeout) # data: {'name': 'value'}
@@ -337,6 +342,7 @@ class LRequest(object):
 
     def load_img(self, url, method='GET', data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,):
 
+        logger.info('Load Image: %s' % url)
         return self.load(url, method=method, data=data, timeout=timeout, is_xpath=False)
 
 
