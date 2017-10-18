@@ -2,6 +2,8 @@
 __author__ = 'xtwxfxk'
 
 import os
+import time
+import random
 import logging
 import urlparse
 import json
@@ -216,7 +218,9 @@ class LStockData():
                 for quarter in range(quarter, 5):
                     try:
                         _url = self.url_format % (code, year, quarter)
-                        logger.info('Load: %s: %s' % (code, _url))
+                        # logger.info('Load: %s: %s' % (code, _url))
+
+                        time.sleep(1) # random.randint(1, 5))
                         self.lr.load(_url)
 
                         if self.lr.body.find('FundHoldSharesTable') > -1:
@@ -251,8 +255,10 @@ class LStockData():
                                         params = urlparse.parse_qs(urlparse.urlparse(detail_url).query, True)
                                         detail_down_url = 'http://market.finance.sina.com.cn/downxls.php?date=%s&symbol=%s' % (
                                         params['date'][0], params['symbol'][0])
+
+                                        time.sleep(1) # random.randint(1, 5))
                                         self.lr.load(detail_down_url)
-                                        logger.info('Load Detail: %s: %s' % (code, detail_down_url))
+                                        # logger.info('Load Detail: %s: %s' % (code, detail_down_url))
 
                                         if self.lr.body.find('language="javascript"') < 0:
                                             for line in self.lr.body.decode('gbk').splitlines()[1:]:
@@ -307,8 +313,10 @@ class LStockData():
                                 stock['amount'] = _transaction_amount
 
                                 stock.append()
+
                     except:
                         raise
+
 
                 quarter = 1
             # stock_table.flush()
@@ -379,7 +387,7 @@ def get_codes():
 
     lr = LRequest()
     for url in urls:
-        logger.info('Load: %s' % url)
+        # logger.info('Load: %s' % url)
         lr.load(url)
 
 
@@ -393,7 +401,7 @@ def get_codes():
             if next_ele is None:
                 break
             next_url = urlparse.urljoin(url, next_ele.attrib['href'])
-            logger.info('Load: %s' % next_url)
+            # logger.info('Load: %s' % next_url)
             lr.load(next_url)
 
     return codes
