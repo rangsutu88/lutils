@@ -1,0 +1,3 @@
+lxml
+pysocks
+BeautifulSoup4
