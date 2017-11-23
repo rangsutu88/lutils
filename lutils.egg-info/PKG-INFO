@@ -1,0 +1,20 @@
+Metadata-Version: 1.1
+Name: lutils
+Version: 0.1.0
+Summary: UNKNOWN
+Home-page: https://github.com/xtwxfxk/lutils
+Author: xtwxfxk
+Author-email: xtwxfxk@163.com
+License: BSD
+Description-Content-Type: UNKNOWN
+Description: # lutils
+        
+        VERSION: 0.1.0
+Keywords: lutils
+Platform: any
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: License :: OSI Approved :: Apache Software License

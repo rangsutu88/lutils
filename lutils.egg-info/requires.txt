@@ -1,0 +1,7 @@
+lxml
+pysocks
+BeautifulSoup4
+requests
+pandas
+tables
+stockstats
