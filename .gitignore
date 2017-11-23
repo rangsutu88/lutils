@@ -1,2 +1,5 @@
 *.pyc
 .idea
+lutils.egg-info
+dist
+build
